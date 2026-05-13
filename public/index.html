@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Ndzuani News</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial;
+}
+
+body{
+    background:#111;
+    color:white;
+}
+
+header{
+    background:linear-gradient(to right,darkred,red);
+    padding:20px;
+    text-align:center;
+    box-shadow:0 0 15px red;
+}
+
+header h1{
+    font-size:42px;
+}
+
+header p{
+    margin-top:10px;
+    color:#eee;
+}
+
+.container{
+    width:90%;
+    max-width:1000px;
+    margin:auto;
+    padding:20px;
+}
+
+.news-card{
+    background:#1b1b1b;
+    padding:20px;
+    border-left:5px solid red;
+    border-radius:12px;
+    margin-bottom:20px;
+    animation:fade 0.3s;
+}
+
+.news-card img,
+.news-card video{
+    width:100%;
+    margin-top:15px;
+    border-radius:10px;
+}
+
+.news-card h2{
+    color:#ff4d4d;
+    margin:10px 0;
+}
+
+.news-card p{
+    color:#ddd;
+    line-height:1.5;
+}
+
+.actions{
+    margin-top:15px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.actions button{
+    border:none;
+    padding:10px 14px;
+    border-radius:8px;
+    cursor:pointer;
+    color:white;
+    font-weight:bold;
+}
+
+.like{
+    background:red;
+}
+
+.dislike{
+    background:#444;
+}
+
+.delete{
+    background:darkred;
+}
+
+.admin-btn{
+    position:fixed;
+    bottom:5px;
+    right:5px;
+    opacity:0.05;
+    width:30px;
+    height:30px;
+    border:none;
+    border-radius:50%;
+    background:red;
+    color:white;
+    cursor:pointer;
+}
+
+.admin-panel{
+    display:none;
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:#1b1b1b;
+    width:90%;
+    max-width:500px;
+    padding:25px;
+    border-radius:15px;
+    border:2px solid red;
+    z-index:1000;
+    max-height:90vh;
+    overflow:auto;
+}
+
+.admin-panel h2{
+    text-align:center;
+    color:red;
+    margin-bottom:10px;
+}
+
+.admin-panel p{
+    text-align:center;
+    color:#ff4d4d;
+    margin-bottom:15px;
+}
+
+.admin-panel input,
+.admin-panel textarea{
+    width:100%;
+    padding:12px;
+    margin-bottom:15px;
+    border:none;
+    border-radius:8px;
+    background:#333;
+    color:white;
+}
+
+.admin-panel textarea{
+    height:120px;
+    resize:none;
+}
+
+.publish-btn{
+    width:100%;
+    padding:12px;
+    background:red;
+    border:none;
+    color:white;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+    margin-bottom:10px;
+}
+
+.publish-btn:hover{
+    background:darkred;
+}
+
+.close-btn{
+    background:#444;
+}
+
+@keyframes fade{
+
+    from{
+        opacity:0;
+        transform:translateY(10px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>Ndzuani News</h1>
+
+    <p>L'actualité des Comores en direct</p>
+
+</header>
+
+<div class="container"
+id="newsContainer"></div>
+
+<button class="admin-btn"
+onclick="openAdmin()">●</button>
+
+<div class="admin-panel"
+id="adminPanel">
+
+    <h2>Administration</h2>
+
+    <button class="publish-btn close-btn"
+        onclick="openAdmin()">
+
+        Fermer
+
+    </button>
+
+    <p id="userCounter">
+        0 utilisateur connecté
+    </p>
+
+    <input type="password"
+        id="password"
+        placeholder="Mot de passe">
+
+    <div id="editor"
+    style="display:none;">
+
+        <input type="text"
+            id="title"
+            placeholder="Titre">
+
+        <textarea id="summary"
+            placeholder="Résumé"></textarea>
+
+        <input type="file"
+            id="media"
+            accept="image/*,video/*">
+
+        <button class="publish-btn"
+            onclick="publishNews()">
+
+            Publier
+
+        </button>
+
+    </div>
+
+    <button class="publish-btn"
+        id="loginBtn"
+        onclick="loginAdmin()">
+
+        Connexion
+
+    </button>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+
+const socket = io();
+
+const PASSWORD = "1234";
+
+let adminLogged = false;
+
+let currentNews = [];
+
+let firstLoad = true;
+
+function openAdmin(){
+
+    const panel =
+        document.getElementById("adminPanel");
+
+    if(panel.style.display === "block"){
+
+        panel.style.display = "none";
+
+    }
+    else{
+
+        panel.style.display = "block";
+
+    }
+
+}
+
+function loginAdmin(){
+
+    const pass =
+        document.getElementById("password").value;
+
+    if(pass === PASSWORD){
+
+        adminLogged = true;
+
+        document.getElementById("editor")
+            .style.display = "block";
+
+        document.getElementById("password")
+            .style.display = "none";
+
+        document.getElementById("loginBtn")
+            .style.display = "none";
+
+        renderNews(currentNews);
+
+    }
+    else{
+
+        alert("Mot de passe incorrect");
+
+    }
+
+}
+
+function publishNews(){
+
+    const title =
+        document.getElementById("title").value;
+
+    const summary =
+        document.getElementById("summary").value;
+
+    const mediaInput =
+        document.getElementById("media");
+
+    if(title === "" || summary === ""){
+
+        alert("Remplis tous les champs");
+
+        return;
+
+    }
+
+    const file = mediaInput.files[0];
+
+    if(file){
+
+        const reader = new FileReader();
+
+        reader.onload = function(e){
+
+            socket.emit("publishNews", {
+
+                title,
+
+                summary,
+
+                media:e.target.result,
+
+                mediaType:file.type
+
+            });
+
+        };
+
+        reader.readAsDataURL(file);
+
+    }
+    else{
+
+        socket.emit("publishNews", {
+
+            title,
+
+            summary
+
+        });
+
+    }
+
+}
+
+socket.on("loadNews", renderNews);
+
+socket.on("updateNews", (news) => {
+
+    if(
+        !firstLoad &&
+        !adminLogged &&
+        Notification.permission === "granted"
+    ){
+
+        const latest = news[0];
+
+        new Notification("Ndzuani News", {
+
+            body: latest.title,
+
+            icon:
+            "https://cdn-icons-png.flaticon.com/512/5968/5968830.png"
+
+        });
+
+    }
+
+    renderNews(news);
+
+    firstLoad = false;
+
+});
+
+socket.on("userCount", (count) => {
+
+    document.getElementById("userCounter")
+        .innerText =
+        count + " utilisateur(s) connecté(s)";
+
+});
+
+function renderNews(news){
+
+    currentNews = news;
+
+    const container =
+        document.getElementById("newsContainer");
+
+    container.innerHTML = "";
+
+    news.forEach(post => {
+
+        const card =
+            document.createElement("div");
+
+        card.className = "news-card";
+
+        let mediaHTML = "";
+
+        if(post.media){
+
+            if(post.mediaType.startsWith("image")){
+
+                mediaHTML = `
+                    <img src="${post.media}">
+                `;
+
+            }
+
+            else if(post.mediaType.startsWith("video")){
+
+                mediaHTML = `
+                    <video controls>
+                        <source src="${post.media}">
+                    </video>
+                `;
+
+            }
+
+        }
+
+        card.innerHTML = `
+
+            <small style="color:#999;">
+
+                Publié le ${post.date}
+
+            </small>
+
+            <h2>${post.title}</h2>
+
+            <p>${post.summary}</p>
+
+            ${mediaHTML}
+
+            <div class="actions">
+
+                <button class="like"
+                    onclick="likeNews(${post.id})">
+
+                    👍 ${post.likes}
+
+                </button>
+
+                <button class="dislike"
+                    onclick="dislikeNews(${post.id})">
+
+                    👎 ${post.dislikes}
+
+                </button>
+
+                ${adminLogged ? `
+
+                <button class="delete"
+                    onclick="deleteNews(${post.id})">
+
+                    🗑 Supprimer
+
+                </button>
+
+                <button class="like"
+                    onclick="editNews(${post.id})">
+
+                    ✏️ Modifier
+
+                </button>
+
+                ` : ""}
+
+            </div>
+
+        `;
+
+        container.appendChild(card);
+
+    });
+
+}
+
+function likeNews(id){
+
+    socket.emit("like", id);
+
+}
+
+function dislikeNews(id){
+
+    socket.emit("dislike", id);
+
+}
+
+function deleteNews(id){
+
+    socket.emit("deleteNews", id);
+
+}
+
+function editNews(id){
+
+    const post = currentNews.find(
+        p => p.id == id
+    );
+
+    if(!post) return;
+
+    const newTitle =
+        prompt("Modifier le titre", post.title);
+
+    if(newTitle === null) return;
+
+    const newSummary =
+        prompt("Modifier le résumé", post.summary);
+
+    if(newSummary === null) return;
+
+    socket.emit("editNews", {
+
+        id:id,
+
+        title:newTitle,
+
+        summary:newSummary
+
+    });
+
+}
+
+// notifications utilisateur
+if(Notification.permission !== "granted"){
+
+    Notification.requestPermission();
+
+}
+
+</script>
+
+</body>
+
+</html>
