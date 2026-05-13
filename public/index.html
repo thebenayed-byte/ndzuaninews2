@@ -101,6 +101,10 @@ header p{
     background:darkred;
 }
 
+.edit{
+    background:#ff6600;
+}
+
 .admin-btn{
     position:fixed;
     bottom:5px;
@@ -172,10 +176,6 @@ header p{
     margin-bottom:10px;
 }
 
-.publish-btn:hover{
-    background:darkred;
-}
-
 .close-btn{
     background:#444;
 }
@@ -232,7 +232,7 @@ id="adminPanel">
 
     <input type="password"
         id="password"
-        placeholder="Mot de passe">
+        placeholder="Mot de passe admin">
 
     <div id="editor"
     style="display:none;">
@@ -273,14 +273,13 @@ id="adminPanel">
 
 const socket = io();
 
-const PASSWORD = "been2026";
-
 let adminLogged = false;
 
 let currentNews = [];
 
 let firstLoad = true;
 
+// ouvrir / fermer admin
 function openAdmin(){
 
     const panel =
@@ -299,35 +298,40 @@ function openAdmin(){
 
 }
 
+// connexion admin
 function loginAdmin(){
 
     const pass =
         document.getElementById("password").value;
 
-    if(pass === PASSWORD){
-
-        adminLogged = true;
-
-        document.getElementById("editor")
-            .style.display = "block";
-
-        document.getElementById("password")
-            .style.display = "none";
-
-        document.getElementById("loginBtn")
-            .style.display = "none";
-
-        renderNews(currentNews);
-
-    }
-    else{
-
-        alert("Mot de passe incorrect");
-
-    }
+    socket.emit("adminLogin", pass);
 
 }
 
+socket.on("adminSuccess", () => {
+
+    adminLogged = true;
+
+    document.getElementById("editor")
+        .style.display = "block";
+
+    document.getElementById("password")
+        .style.display = "none";
+
+    document.getElementById("loginBtn")
+        .style.display = "none";
+
+    renderNews(currentNews);
+
+});
+
+socket.on("adminError", () => {
+
+    alert("Mot de passe incorrect");
+
+});
+
+// publier
 function publishNews(){
 
     const title =
@@ -386,8 +390,10 @@ function publishNews(){
 
 }
 
+// charger news
 socket.on("loadNews", renderNews);
 
+// mise à jour news
 socket.on("updateNews", (news) => {
 
     if(
@@ -415,6 +421,7 @@ socket.on("updateNews", (news) => {
 
 });
 
+// utilisateurs connectés
 socket.on("userCount", (count) => {
 
     document.getElementById("userCounter")
@@ -423,6 +430,7 @@ socket.on("userCount", (count) => {
 
 });
 
+// afficher news
 function renderNews(news){
 
     currentNews = news;
@@ -502,7 +510,7 @@ function renderNews(news){
 
                 </button>
 
-                <button class="like"
+                <button class="edit"
                     onclick="editNews(${post.id})">
 
                     ✏️ Modifier
@@ -521,24 +529,28 @@ function renderNews(news){
 
 }
 
+// likes
 function likeNews(id){
 
     socket.emit("like", id);
 
 }
 
+// dislikes
 function dislikeNews(id){
 
     socket.emit("dislike", id);
 
 }
 
+// supprimer
 function deleteNews(id){
 
     socket.emit("deleteNews", id);
 
 }
 
+// modifier
 function editNews(id){
 
     const post = currentNews.find(
