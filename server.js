@@ -11,16 +11,32 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
+// mot de passe admin
+const ADMIN_PASSWORD = "1234";
+
+// utilisateurs connectés
 let connectedUsers = 0;
 
-// charger les news
+// charger les publications
 let news = [];
 
-if(fs.existsSync("news.json")){
+try{
 
-    news = JSON.parse(
-        fs.readFileSync("news.json")
-    );
+    if(fs.existsSync("news.json")){
+
+        const data =
+            fs.readFileSync("news.json", "utf8");
+
+        news = data ? JSON.parse(data) : [];
+
+    }
+
+}
+catch(error){
+
+    console.log("Erreur JSON détectée");
+
+    news = [];
 
 }
 
@@ -43,6 +59,22 @@ io.on("connection", (socket) => {
     console.log("Utilisateur connecté");
 
     socket.emit("loadNews", news);
+
+    // connexion admin
+    socket.on("adminLogin", (password) => {
+
+        if(password === ADMIN_PASSWORD){
+
+            socket.emit("adminSuccess");
+
+        }
+        else{
+
+            socket.emit("adminError");
+
+        }
+
+    });
 
     // publier
     socket.on("publishNews", (data) => {
@@ -76,7 +108,7 @@ io.on("connection", (socket) => {
 
     });
 
-    // liker
+    // likes
     socket.on("like", (id) => {
 
         news = news.map(post => {
@@ -97,7 +129,7 @@ io.on("connection", (socket) => {
 
     });
 
-    // dislike
+    // dislikes
     socket.on("dislike", (id) => {
 
         news = news.map(post => {
