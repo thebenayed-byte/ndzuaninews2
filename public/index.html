@@ -24,6 +24,8 @@ body{
     color:white;
 }
 
+/* HEADER */
+
 header{
     background:linear-gradient(to right,darkred,red);
     padding:20px;
@@ -40,12 +42,72 @@ header p{
     color:#eee;
 }
 
+/* BARRE ACTUALITÉ */
+
+.top-bar{
+    background:#990000;
+    overflow:hidden;
+    white-space:nowrap;
+    border-top:2px solid red;
+    border-bottom:2px solid red;
+    padding:10px 0;
+}
+
+.ticker-container{
+    width:100%;
+    overflow:hidden;
+}
+
+.ticker{
+    display:inline-block;
+    padding-left:100%;
+    animation:tickerMove 25s linear infinite;
+    font-weight:bold;
+    color:white;
+    font-size:18px;
+}
+
+@keyframes tickerMove{
+
+    from{
+        transform:translateX(0);
+    }
+
+    to{
+        transform:translateX(-100%);
+    }
+
+}
+
+/* RECHERCHE */
+
+.search-box{
+    width:90%;
+    max-width:1000px;
+    margin:20px auto;
+}
+
+.search-box input{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:#222;
+    color:white;
+    font-size:16px;
+    border:2px solid red;
+}
+
+/* CONTENU */
+
 .container{
     width:90%;
     max-width:1000px;
     margin:auto;
     padding:20px;
 }
+
+/* ARTICLES */
 
 .news-card{
     background:#1b1b1b;
@@ -104,6 +166,8 @@ header p{
 .edit{
     background:#ff6600;
 }
+
+/* ADMIN */
 
 .admin-btn{
     position:fixed;
@@ -180,6 +244,8 @@ header p{
     background:#444;
 }
 
+/* ANIMATION */
+
 @keyframes fade{
 
     from{
@@ -208,11 +274,45 @@ header p{
 
 </header>
 
+<!-- BARRE D'ACTUALITÉ -->
+
+<div class="top-bar">
+
+    <div class="ticker-container">
+
+        <div class="ticker"
+        id="ticker">
+
+            Bienvenue sur Ndzuani News
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- RECHERCHE -->
+
+<div class="search-box">
+
+    <input type="text"
+        id="searchInput"
+        placeholder="Rechercher une actualité..."
+        onkeyup="searchNews()">
+
+</div>
+
+<!-- NEWS -->
+
 <div class="container"
 id="newsContainer"></div>
 
+<!-- BOUTON ADMIN -->
+
 <button class="admin-btn"
 onclick="openAdmin()">●</button>
+
+<!-- PANEL ADMIN -->
 
 <div class="admin-panel"
 id="adminPanel">
@@ -279,7 +379,8 @@ let currentNews = [];
 
 let firstLoad = true;
 
-// ouvrir / fermer admin
+/* ADMIN */
+
 function openAdmin(){
 
     const panel =
@@ -298,7 +399,6 @@ function openAdmin(){
 
 }
 
-// connexion admin
 function loginAdmin(){
 
     const pass =
@@ -331,7 +431,8 @@ socket.on("adminError", () => {
 
 });
 
-// publier
+/* PUBLIER */
+
 function publishNews(){
 
     const title =
@@ -390,10 +491,18 @@ function publishNews(){
 
 }
 
-// charger news
-socket.on("loadNews", renderNews);
+/* CHARGEMENT */
 
-// mise à jour news
+socket.on("loadNews", (news) => {
+
+    renderNews(news);
+
+    updateTicker(news);
+
+});
+
+/* MISE À JOUR */
+
 socket.on("updateNews", (news) => {
 
     if(
@@ -417,11 +526,14 @@ socket.on("updateNews", (news) => {
 
     renderNews(news);
 
+    updateTicker(news);
+
     firstLoad = false;
 
 });
 
-// utilisateurs connectés
+/* UTILISATEURS */
+
 socket.on("userCount", (count) => {
 
     document.getElementById("userCounter")
@@ -430,7 +542,62 @@ socket.on("userCount", (count) => {
 
 });
 
-// afficher news
+/* BARRE ACTU */
+
+function updateTicker(news){
+
+    const ticker =
+        document.getElementById("ticker");
+
+    if(news.length === 0){
+
+        ticker.innerText =
+        "Bienvenue sur Ndzuani News";
+
+        return;
+
+    }
+
+    let text = "";
+
+    news.forEach(post => {
+
+        text +=
+        " 🔴 " + post.title + "   ";
+
+    });
+
+    ticker.innerText = text;
+
+}
+
+/* RECHERCHE */
+
+function searchNews(){
+
+    const value =
+        document.getElementById("searchInput")
+        .value.toLowerCase();
+
+    const filtered =
+        currentNews.filter(post =>
+
+            post.title.toLowerCase()
+            .includes(value)
+
+            ||
+
+            post.summary.toLowerCase()
+            .includes(value)
+
+        );
+
+    renderNews(filtered);
+
+}
+
+/* AFFICHAGE */
+
 function renderNews(news){
 
     currentNews = news;
@@ -529,28 +696,26 @@ function renderNews(news){
 
 }
 
-// likes
+/* ACTIONS */
+
 function likeNews(id){
 
     socket.emit("like", id);
 
 }
 
-// dislikes
 function dislikeNews(id){
 
     socket.emit("dislike", id);
 
 }
 
-// supprimer
 function deleteNews(id){
 
     socket.emit("deleteNews", id);
 
 }
 
-// modifier
 function editNews(id){
 
     const post = currentNews.find(
@@ -581,7 +746,8 @@ function editNews(id){
 
 }
 
-// notifications utilisateur
+/* NOTIFICATIONS */
+
 if(Notification.permission !== "granted"){
 
     Notification.requestPermission();
